@@ -25,7 +25,13 @@ export default function CadastroReagentes( ){
 
   db.transaction(tx => {
     tx.executeSql(
-      'CREATE TABLE IF NOT EXISTS lote (id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT, validade TEXT, quantidade_geral REAL, unidade_medida TEXT)'
+      'DROP TABLE lote'
+    );
+  });
+
+  db.transaction(tx => {
+    tx.executeSql(
+      'CREATE TABLE IF NOT EXISTS lote (id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT, validade TEXT, quantidade_geral TEXT, unidade_medida TEXT)'
     );
   });
 
@@ -35,22 +41,47 @@ export default function CadastroReagentes( ){
     );
   });
 
-  function deletarDados(){
+  //OS ARMÁRIOS SERÃO CADASTRADOS EM UMA TELA SEPARADA
+  function inserirArmario(){
     db.transaction(tx => {
-      tx.executeSql('DELETE FROM armario', () => {
-        console.log('Deletado com sucesso');
-      });
-      error => {
-        console.log('Erro de transação para deletar: ', error);
-      }
+      tx.executeSql(
+        'INSERT INTO armario (nome) VALUES (?)',
+        ['Armário 1'],
+        () => {
+          console.log('Dado inserido com sucesso');
+        },
+        error => {
+          console.log('Error inserting data: ', error);
+        }
+      );
+    });
+  }
+
+  function deletarDados(){
+    db.transaction((tx) => {
+      tx.executeSql(
+        'DELETE FROM produto',
+        [],
+        () => {
+          console.log('Dados deletados com sucesso!');
+        },
+        (error) => {
+          console.log('Erro ao deletar dados:', error);
+        }
+      );
     });
   }
 
   function consultaDados(){
     db.transaction(tx => {
-      tx.executeSql('SELECT * FROM armario', [], (_, { rows }) => {
+      tx.executeSql('SELECT produto.nome, lote.numero, lote.quantidade_geral FROM produto, lote ON produto.lote_id = lote.id ', [], (_, { rows }) => {
         console.log(rows._array);
-      });
+      },
+      error => {
+        console.log('Erro ao consultar dados:', error);
+      }
+      );
+      
     });
   }
 
@@ -68,15 +99,26 @@ export default function CadastroReagentes( ){
   };
   
   function insertDatas(){
+    console.log(quantidade)
     db.transaction(tx => {
       tx.executeSql(
-        'INSERT INTO armario (nome) VALUES (?)',
-        [nomeReagente],
+        'INSERT INTO lote ( numero, validade, quantidade_geral, unidade_medida) VALUES (?, ?, ?, ?)',
+        [lote, validade, quantidade, unidadeMedida],
         () => {
           console.log('Dado inserido com sucesso');
         },
         error => {
-          console.log('Error inserting data: ', error);
+          console.log('Error inserting data1: ', error);
+        }
+      );
+      tx.executeSql(
+        'INSERT INTO produto (nome, armario_id, lote_id) VALUES (?, ?, ?)',
+        [nomeReagente, 1, 1],
+        () => {
+          console.log('Dado inserido com sucesso');
+        },
+        error => {
+          console.log('Error inserting data2: ', error);
         }
       );
     });

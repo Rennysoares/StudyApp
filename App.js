@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 
 import { 
@@ -12,23 +12,41 @@ import {
   VirtualizedList
 } from 'react-native';
 
-export default function App() {
+export default function Calculadora() {
   const[value1, setValue1] = useState("");
   const[value2, setValue2] = useState("");
   const[value3, setValue3] = useState("");
-  const[visibleModal, setVisibleModal] = useState(true);
+  const[buttonEnable, setButtonEnable] = useState(true);
+
+  useEffect(()=>{
+    console.log("componente atual atualizado")
+    if (value1 == "" || value2 == "" || value3 == ""){
+        setButtonEnable(true)
+    }else{
+        setButtonEnable(false)
+    }
+  })
 
   function CalculaMaiorValor(){
     const maiorValor = Math.max(parseInt(value1), parseInt(value2), parseInt(value3))
-    Alert.alert('Maior Valor', 'O maior valor é: ' + maiorValor);
+    if (isNaN(maiorValor)){
+        Alert.alert('Erro', 'Insira números válidos para o cálculo');
+    }else{
+        Alert.alert('Maior Valor', 'O maior valor é ' + maiorValor);
+    }
+    
   }
   function CalculaMenorValor(){
     const menorValor = Math.min(parseInt(value1), parseInt(value2), parseInt(value3))
-    Alert.alert('Menor Valor', 'O menor valor é: ' + menorValor);
+    if (isNaN(menorValor)){
+        Alert.alert('Erro', 'Insira números válidos para o cálculo');
+    }else{
+        Alert.alert('Menor Valor', 'O menor valor é ' + menorValor);
+    }
   }
   return (
     <View style={styles.container}>
-      <Text>Aplicativo para achar o maior valor</Text>
+      <Text>Insira números para </Text>
       <TextInput
         style={styles.textInput}
         value={value1}
@@ -55,28 +73,16 @@ export default function App() {
       <Button
         title="Ache o maior valor"
         onPress={CalculaMaiorValor}
+        disabled={buttonEnable}
       />
       </View>
       <View>
       <Button
         title="Ache o menor valor"
         onPress={CalculaMenorValor}
+        disabled={buttonEnable}
       />
       </View>
-      <Modal
-        transparent={visibleModal}
-        visible={visibleModal}
-      >
-        <View style={styles.modal}>
-        <View style={styles.box}>
-          <Text>Olá, bem vindo ao aplicativo</Text>
-          <Button
-            title="vamos começar"
-            onPress={()=>{setVisibleModal(false)}}
-          />
-        </View>
-        </View>
-      </Modal>
     </View>
   );
 }

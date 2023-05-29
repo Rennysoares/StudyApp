@@ -7,55 +7,67 @@ import {
   TouchableOpacity, 
   Image, 
   Button,
-  Switch
+  Switch,
+  ScrollView
 } from 'react-native';
 import * as SQLite from "expo-sqlite";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { MaskedTextInput } from 'react-native-mask-text';
 
 export default function CadastroReagentes( ){
 
   const db = SQLite.openDatabase('dbName');
 
-  db.transaction(tx => {
-    tx.executeSql(
-      'CREATE TABLE IF NOT EXISTS armario (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)'
-    );
-  });
-
-  db.transaction(tx => {
-    tx.executeSql(
-      'DROP TABLE lote'
-    );
-  });
-
-  db.transaction(tx => {
-    tx.executeSql(
-      'CREATE TABLE IF NOT EXISTS lote (id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT, validade TEXT, quantidade_geral TEXT, unidade_medida TEXT)'
-    );
-  });
-
-  db.transaction(tx => {
-    tx.executeSql(
-      'CREATE TABLE IF NOT EXISTS produto (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, armario_id INTEGER, lote_id INTEGER, FOREIGN KEY (armario_id) REFERENCES armario (id), FOREIGN KEY (lote_id) REFERENCES lote (id))'
-    );
-  });
-
-  //OS ARMÁRIOS SERÃO CADASTRADOS EM UMA TELA SEPARADA
-  function inserirArmario(){
-    db.transaction(tx => {
-      tx.executeSql(
-        'INSERT INTO armario (nome) VALUES (?)',
-        ['Armário 1'],
-        () => {
-          console.log('Dado inserido com sucesso');
-        },
-        error => {
-          console.log('Error inserting data: ', error);
-        }
-      );
+  function apagarTabelas(){
+    db.transaction((tx) => {
+      // Execute a instrução SQL para remover a tabela
+      tx.executeSql('DROP TABLE IF EXISTS lote;', [], (_, result) => {
+        console.log('Tabela apagada com sucesso.');
+      },
+      (_, error) => {
+        console.log('Erro ao apagar tabela:', error);
+      });
+    });
+    db.transaction((tx) => {
+      // Execute a instrução SQL para remover a tabela
+      tx.executeSql('DROP TABLE IF EXISTS produto;', [], (_, result) => {
+        console.log('Tabela apagada com sucesso.');
+      },
+      (_, error) => {
+        console.log('Erro ao apagar tabela:', error);
+      });
     });
   }
+  
+ 
+
+  
+      db.transaction((tx) => {
+        // Execute a instrução SQL para remover a tabela
+        tx.executeSql('CREATE TABLE IF NOT EXISTS lote (id INTEGER PRIMARY KEY AUTOINCREMENT, numero TEXT, validade TEXT, quantidade_geral REAL, unidade_medida TEXT, localizacao TEXT)', [], (_, result) => {
+          console.log('Tabela criada com sucesso.');
+        },
+        (_, error) => {
+          console.log('Erro ao apagar tabela:', error);
+        });
+      });
+      db.transaction((tx) => {
+        // Execute a instrução SQL para remover a tabela
+        tx.executeSql('CREATE TABLE IF NOT EXISTS produto (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, lote_id INTEGER, FOREIGN KEY (lote_id) REFERENCES lote (id))', [], (_, result) => {
+          console.log('Tabela criada com sucesso.');
+        },
+        (_, error) => {
+          console.log('Erro ao apagar tabela:', error);
+        });
+      });
+
+
+    
+    //apagarTabelas()
+    //criarTabelas()
+
+  
 
   function deletarDados(){
     db.transaction((tx) => {
@@ -70,11 +82,33 @@ export default function CadastroReagentes( ){
         }
       );
     });
+    db.transaction((tx) => {
+      tx.executeSql(
+        'DELETE FROM lote',
+        [],
+        () => {
+          console.log('Dados deletados com sucesso!');
+        },
+        (error) => {
+          console.log('Erro ao deletar dados:', error);
+        }
+      );
+    });
   }
+
 
   function consultaDados(){
     db.transaction(tx => {
-      tx.executeSql('SELECT produto.nome, lote.numero, lote.quantidade_geral FROM produto, lote ON produto.lote_id = lote.id ', [], (_, { rows }) => {
+      tx.executeSql('SELECT produto.nome, lote.numero, lote.quantidade_geral, lote.unidade_medida FROM produto, lote ON produto.lote_id = lote.id ', [], (_, { rows }) => {
+        console.log(rows._array);
+      },
+      error => {
+        console.log('Erro ao consultar dados:', error);
+      }
+      );
+    });
+    db.transaction(tx => {
+      tx.executeSql('SELECT * FROM produto ', [], (_, { rows }) => {
         console.log(rows._array);
       },
       error => {
@@ -83,49 +117,77 @@ export default function CadastroReagentes( ){
       );
       
     });
+    db.transaction(tx => {
+      tx.executeSql('SELECT * FROM lote ', [], (_, { rows }) => {
+        console.log(rows._array);
+      },
+      error => {
+        console.log('Erro ao consultar dados:', error);
+      }
+      );
+      
+    });
+    
   }
 
   const[nomeReagente, setNomeReagente] = useState('')
   const[lote, setLote ] = useState('')
-  const[quantidade, setQuantidade] = useState('')
+  const[quantidadeUnitario, setQuantidadeUnitario] = useState('')
   const[validade, setValidade] = useState('')
   const[localizacao, setLocalizacao] = useState('')
-  const [unidadeMedida, setUnidadeMedida] = useState('ml');
 
-  const toggleUnidadeMedida = () => {
-    const novaUnidadeMedida = unidadeMedida === 'g' ? 'ml' : 'g';
-    setUnidadeMedida(novaUnidadeMedida);
-    console.log(novaUnidadeMedida)
-  };
+  const[boolunidadeMedida, setBoolUnidadeMedida] = useState(false);
+  const[sufixo, setSufixo] = useState('ml');
+  const[quantidadeFrascos, setQuantidadeFrascos] = useState('')
+  const[quantidadeCalculada, setQuantidadeCalculada] = useState('')
+
+  useEffect(()=>{
+    setQuantidadeCalculada(parseFloat(quantidadeFrascos)*parseFloat(quantidadeUnitario))
+  })
+
+  useEffect(() => {
+    // Atualiza o sufixo quando o valor do switch é alterado
+    if (boolunidadeMedida) {
+      setSufixo('ml');
+    } else {
+      setSufixo('g');
+    }
+
+  }, [boolunidadeMedida ]);
   
-  function insertDatas(){
-    console.log(quantidade)
+
+
+  function insertDatas() {
     db.transaction(tx => {
       tx.executeSql(
-        'INSERT INTO lote ( numero, validade, quantidade_geral, unidade_medida) VALUES (?, ?, ?, ?)',
-        [lote, validade, quantidade, unidadeMedida],
-        () => {
-          console.log('Dado inserido com sucesso');
+        'INSERT INTO lote (numero, validade, quantidade_geral, unidade_medida, localizacao) VALUES (?, ?, ?, ?, ?)',
+        [lote, validade, parseFloat(quantidadeCalculada), sufixo, localizacao],
+        (tx, result) => {
+          const loteId = result.insertId; // Recupera o ID do lote inserido
+          console.log('Lote inserido com sucesso', loteId);
+  
+          tx.executeSql(
+            'INSERT INTO produto (nome, lote_id) VALUES (?, ?)',
+            [nomeReagente, loteId], // Insere o ID do lote recuperado
+            () => {
+              console.log('Produto inserido com sucesso');
+            },
+            error => {
+              console.log('Error inserting data2: ', error);
+            }
+          );
         },
         error => {
           console.log('Error inserting data1: ', error);
         }
       );
-      tx.executeSql(
-        'INSERT INTO produto (nome, armario_id, lote_id) VALUES (?, ?, ?)',
-        [nomeReagente, 1, 1],
-        () => {
-          console.log('Dado inserido com sucesso');
-        },
-        error => {
-          console.log('Error inserting data2: ', error);
-        }
-      );
     });
   }
+  
 
   return(
     <SafeAreaView>
+      <ScrollView>
       <StatusBar
         backgroundColor='rgb(0, 255, 0)'/>
       <Text style={styles.titleinput}>Nome do reagente: </Text>
@@ -148,28 +210,40 @@ export default function CadastroReagentes( ){
         placeholderTextColor='rgb(200, 200, 200)'
       />
 
-      <Text style={styles.titleinput}>Quantidade: </Text>
+      <Text style={styles.titleinput}>Quantidade de cada frasco: </Text>
       <TextInput
-        value={quantidade}
-        onChangeText={setQuantidade}
+        value={quantidadeUnitario}
+        onChangeText={setQuantidadeUnitario}
 
-        placeholder="Ex: 2"
-        placeholderTextColor='rgb(200, 200, 200)'
         style={styles.txtInput}
+        placeholder="Ex: 120"
+        placeholderTextColor='rgb(200, 200, 200)'
       />
+
       <Switch
-        value={unidadeMedida === 'ml'}
-        onValueChange={toggleUnidadeMedida}
+        value={boolunidadeMedida}
+        onValueChange={setBoolUnidadeMedida}
       />
-      <Text style={styles.titleinput}>Validade: </Text>
+      <Text style={styles.titleinput}>Quantidade de frascos: </Text>
       <TextInput
-        value={validade}
-        onChangeText={setValidade}
+        value={quantidadeFrascos}
+        onChangeText={setQuantidadeFrascos}
 
         style={styles.txtInput}
-        placeholder="Ex: 12/07/2025"
+        placeholder="Ex: 7234923"
         placeholderTextColor='rgb(200, 200, 200)'
       />
+
+      <Text style={styles.titleinput}>Validade: </Text>
+
+      <MaskedTextInput
+          mask="99-99-9999"
+          placeholder="Ex: 01-01-2021"
+          placeholderTextColor='rgb(200, 200, 200)'
+          onChangeText={setValidade}
+          keyboardType="numeric"
+          style={styles.txtInput}
+        />
 
       <Text style={styles.titleinput}>Localização: </Text>
       <TextInput
@@ -180,6 +254,7 @@ export default function CadastroReagentes( ){
         placeholderTextColor='rgb(200, 200, 200)'
         style={styles.txtInput}
       />
+      
       <Button
         title='Cadastrar reagentes'
         //disabled={true}
@@ -195,6 +270,12 @@ export default function CadastroReagentes( ){
         //disabled={true}
         onPress={deletarDados}
       />
+      <Button
+        title='drop table'
+        disabled={true}
+        onPress={()=>{}}
+      />
+      </ScrollView>
     </SafeAreaView>
   )
 }
